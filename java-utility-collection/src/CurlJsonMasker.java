@@ -1,6 +1,7 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,7 @@ import java.util.regex.Pattern;
 public class CurlJsonMasker {
 
     // List of keys to mask
-    static List<String> keysToMask = List.of("userAccountId", "firstName", "lastName","workTypes");
+    static List<String> keysToMask = List.of("userAccountId", "firstName", "lastName", "workTypes");
 
     // Method to mask the value of specified keys in the JSON
     public static JsonNode maskJsonNode(JsonNode node, List<String> keysToMask) {
@@ -45,7 +46,13 @@ public class CurlJsonMasker {
         return null;
     }
 
-    // Method to parse the cURL command and mask values for multiple keys
+    // Method to rebuild the cURL command with masked JSON
+    public static String rebuildCurlCommand(String originalCurlCommand, String maskedJsonString) {
+        // Replace the original JSON in the cURL command with the masked JSON
+        return originalCurlCommand.replaceFirst("(?<=--data ').*?(?=')", maskedJsonString);
+    }
+
+    // Method to parse the cURL command, mask values for multiple keys, and return the full cURL command
     public static String maskCurlJson(String curlCommand, List<String> keysToMask) throws Exception {
         String jsonString = extractJsonFromCurl(curlCommand);
 
@@ -61,7 +68,10 @@ public class CurlJsonMasker {
         JsonNode maskedNode = maskJsonNode(jsonNode, keysToMask);
 
         // Convert the modified JSON back to string
-        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(maskedNode);
+        String maskedJsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(maskedNode);
+
+        // Rebuild the cURL command with the masked JSON
+        return rebuildCurlCommand(curlCommand, maskedJsonString);
     }
 
     public static void main(String[] args) {
@@ -69,13 +79,12 @@ public class CurlJsonMasker {
             // Example cURL command
             String curlCommand = "";
 
+            // Mask the JSON in the cURL command
+            String maskedCurl = maskCurlJson(curlCommand, keysToMask);
 
+            // Print the masked cURL command
+            System.out.println(maskedCurl);
 
-            // Mask the JSON data for the specified keys
-            String maskedJson = maskCurlJson(curlCommand, keysToMask);
-
-            // Output the masked JSON
-            System.out.println(maskedJson);
         } catch (Exception e) {
             e.printStackTrace();
         }

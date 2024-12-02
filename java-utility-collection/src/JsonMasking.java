@@ -3,6 +3,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import java.io.IOException;
 import java.util.List;
 
 public class JsonMasking {
@@ -29,6 +30,8 @@ public class JsonMasking {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             return jsonString; // Return the original string in case of errors
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
