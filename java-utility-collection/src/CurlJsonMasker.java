@@ -46,15 +46,30 @@ public class CurlJsonMasker {
         return null;
     }
 
+    // Method to escape JSON string for inclusion in the cURL command
+    public static String escapeJsonForCurl(String jsonString) {
+        return jsonString.replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                .replace("'", "\\'");
+    }
+
     // Method to rebuild the cURL command with masked JSON
     public static String rebuildCurlCommand(String originalCurlCommand, String maskedJsonString) {
-        // Replace the original JSON in the cURL command with the masked JSON
+        // Escape the masked JSON to maintain the original structure and format
+        //String escapedJson = escapeJsonForCurl(maskedJsonString);
+
+        // Replace the original JSON in the cURL command with the escaped, masked JSON
         return originalCurlCommand.replaceFirst("(?<=--data ').*?(?=')", maskedJsonString);
     }
 
     // Method to parse the cURL command, mask values for multiple keys, and return the full cURL command
     public static String maskCurlJson(String curlCommand, List<String> keysToMask) throws Exception {
-        String jsonString = extractJsonFromCurl(curlCommand);
+
+        curlCommand=curlCommand.replace("\r","");
+        curlCommand=curlCommand.replace("\n","");
+
+        String jsonString = extractJsonFromCurl(curlCommand.trim());
 
         if (jsonString == null) {
             return "No JSON data found in the provided cURL command.";
