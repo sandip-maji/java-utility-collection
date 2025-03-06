@@ -1,35 +1,51 @@
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.util.Random;
+import java.util.Scanner;
 
 public class PreventLockAndRunForever {
     @SuppressWarnings("BusyWait")
     public static void main(String[] args) {
         try {
             Robot robot = new Robot();
-            System.out.println("Program is running. Press Ctrl+☭ to stop.");
+            Random random = new Random();
+            Scanner scanner = new Scanner(System.in);
 
-            // Handle Ctrl+C to exit cleanly
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("\nStopping program... Exiting gracefully.");
-            }));
+            System.out.println("Preventing screen lock. Press 'ESC' to exit.");
+
+            // Create a separate thread to listen for exit command
+            Thread stopThread = new Thread(() -> {
+                while (true) {
+                    if (scanner.nextLine().equalsIgnoreCase("exit")) {
+                        System.out.println("Exiting...");
+                        System.exit(0);
+                    }
+                }
+            });
+            stopThread.setDaemon(true);
+            stopThread.start();
 
             while (true) {
+                // Get current mouse location
                 Point location = MouseInfo.getPointerInfo().getLocation();
 
-                // Move the mouse in a large movement
-                robot.mouseMove(location.x + 100, location.y + 100);
-                Thread.sleep(1000); // Pause to make movement visible
-
-                robot.mouseMove(location.x, location.y);
+                // Move the mouse randomly
+                int moveX = random.nextInt(50) - 25; // Move between -25 to +25 pixels
+                int moveY = random.nextInt(50) - 25;
+                robot.mouseMove(location.x + moveX, location.y + moveY);
                 Thread.sleep(1000);
 
-                // Simulate pressing Shift key
+                // Press and release keys
                 robot.keyPress(KeyEvent.VK_SHIFT);
                 robot.keyRelease(KeyEvent.VK_SHIFT);
 
-                //System.out.println("Mouse moved and key pressed.");
+                robot.keyPress(KeyEvent.VK_CONTROL);
+                robot.keyRelease(KeyEvent.VK_CONTROL);
 
-                Thread.sleep(5000); // Wait 5 seconds before repeating
+                robot.keyPress(KeyEvent.VK_NUM_LOCK);
+                robot.keyRelease(KeyEvent.VK_NUM_LOCK);
+
+                Thread.sleep(5000); // Pause before next action
             }
         } catch (AWTException | InterruptedException e) {
             e.printStackTrace();
