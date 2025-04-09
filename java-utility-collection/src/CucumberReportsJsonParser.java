@@ -1,30 +1,27 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CucumberReportJsonParser {
 
     public static void main(String[] args) throws IOException {
         String content = Files.readString(Paths.get("target/cucumber/report.js"));
         Map<String, Object> parsedReport = parseReport(content);
-        System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(parsedReport));
+        String prettyJson = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(parsedReport);
+        System.out.println(prettyJson);
     }
 
     public static Map<String, Object> parseReport(String content) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
 
-
-Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Pattern.DOTALL);
-
-
-        //Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Pattern.DOTALL);
-
-
+        // Match formatter.type({...});
+        Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Pattern.DOTALL);
         Matcher matcher = pattern.matcher(content);
 
         Map<String, Object> report = new LinkedHashMap<>();
@@ -36,10 +33,10 @@ Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Patt
 
         while (matcher.find()) {
             String type = matcher.group(1);
-            String jsonText = matcher.group(2).replaceAll("\\\\u([0-9A-Fa-f]{4})", match -> {
-                int code = Integer.parseInt(match.group(1), 16);
-                return String.valueOf((char) code);
-            });
+            String jsonText = matcher.group(2);
+
+            // Fix Unicode \uXXXX escapes manually
+            jsonText = decodeUnicode(jsonText);
 
             JsonNode jsonNode = objectMapper.readTree(jsonText);
 
@@ -51,6 +48,7 @@ Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Patt
                     currentFeature.put("scenarios", currentScenarios);
                     features.add(currentFeature);
                     break;
+
                 case "scenario":
                 case "scenarioOutline":
                     currentScenario = new LinkedHashMap<>();
@@ -62,6 +60,7 @@ Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Patt
                         currentScenarios.add(currentScenario);
                     }
                     break;
+
                 case "step":
                     if (currentSteps != null && jsonNode.has("name") && jsonNode.has("keyword")) {
                         Map<String, Object> step = new LinkedHashMap<>();
@@ -70,19 +69,35 @@ Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Patt
                         currentSteps.add(step);
                     }
                     break;
+
                 case "result":
                     if (currentSteps != null && !currentSteps.isEmpty()) {
                         Map<String, Object> lastStep = currentSteps.get(currentSteps.size() - 1);
-                        lastStep.put("status", jsonNode.get("status").asText());
+                        if (jsonNode.has("status")) {
+                            lastStep.put("status", jsonNode.get("status").asText());
+                        }
                     }
                     break;
+
                 default:
-                    // Ignore other types like uri, examples, etc. for now
+                    // Ignored for now: uri, examples, embeddings, etc.
                     break;
             }
         }
 
         report.put("features", features);
         return report;
+    }
+
+    private static String decodeUnicode(String input) {
+        Pattern unicode = Pattern.compile("\\\\u([0-9A-Fa-f]{4})");
+        Matcher matcher = unicode.matcher(input);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String ch = String.valueOf((char) Integer.parseInt(matcher.group(1), 16));
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(ch));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 }
