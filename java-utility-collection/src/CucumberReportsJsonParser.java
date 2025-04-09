@@ -18,7 +18,11 @@ public class CucumberReportJsonParser {
     public static Map<String, Object> parseReport(String content) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
 
-        Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Pattern.DOTALL);
+Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Pattern.DOTALL);
+
+        //Pattern pattern = Pattern.compile("formatter\\.(\\w+)\(\\{.*?\\})\;", Pattern.DOTALL);
+
+
         Matcher matcher = pattern.matcher(content);
 
         Map<String, Object> report = new LinkedHashMap<>();
