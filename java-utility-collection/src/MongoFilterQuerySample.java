@@ -10,11 +10,19 @@ public class MongoFilterQuerySample {
         List<Criteria> criteriaList = new ArrayList<>();
 
         if (filterMap.containsKey("service")) {
-            criteriaList.add(Criteria.where("service").in(filterMap.get("service")));
+            List<String> serviceKeywords = filterMap.get("service");
+            if (serviceKeywords != null) {
+                List<Criteria> partialMatches = serviceKeywords.stream()
+                        .map(keyword -> Criteria.where("service").regex(".*" + Pattern.quote(keyword) + ".*", "i"))
+                        .collect(Collectors.toList());
+                criteriaList.add(new Criteria().orOperator(partialMatches.toArray(new Criteria[0])));
+            }
         }
-        if (filterMap.containsKey("pid")) {
+
+        if (filterMap.containsKey("pis")) {
             criteriaList.add(Criteria.where("pis").in(filterMap.get("pis")));
         }
+
         if (filterMap.containsKey("workingId")) {
             criteriaList.add(Criteria.where("workingId").in(filterMap.get("workingId")));
         }
@@ -31,6 +39,7 @@ public class MongoFilterQuerySample {
 
         return new PageImpl<>(results, PageRequest.of(page, size), total);
     }
+
 
 
     private Map<String, List<String>> parseFilterQuery(String filterQuery) {
